@@ -350,6 +350,7 @@ fn settings_contain_common_config(app_type: &AppType, settings: &Value, snippet:
             _ => false,
         },
         AppType::OpenCode | AppType::OpenClaw | AppType::Hermes | AppType::ClaudeDesktop => false,
+        AppType::Kimi => false,
     }
 }
 
