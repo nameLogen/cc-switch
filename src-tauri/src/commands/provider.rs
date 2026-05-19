@@ -455,23 +455,40 @@ async fn query_provider_usage_inner(
 
     // ── Coding Plan 专用路径 ──
     if template_type == TEMPLATE_TYPE_TOKEN_PLAN {
-        // 从供应商配置中提取 API Key 和 Base URL
+        // 从供应商配置中提取 API Key 和 Base URL（按 app_type 区分字段名）
         let settings_config = provider
             .map(|p| &p.settings_config)
             .cloned()
             .unwrap_or_default();
         let env = settings_config.get("env");
-        let base_url = env
-            .and_then(|e| e.get("ANTHROPIC_BASE_URL"))
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
-        let api_key = env
-            .and_then(|e| {
-                e.get("ANTHROPIC_AUTH_TOKEN")
-                    .or_else(|| e.get("ANTHROPIC_API_KEY"))
-            })
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
+        let (base_url, api_key) = match app_type {
+            AppType::Claude | AppType::ClaudeDesktop => {
+                let base = env
+                    .and_then(|e| e.get("ANTHROPIC_BASE_URL"))
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("");
+                let key = env
+                    .and_then(|e| {
+                        e.get("ANTHROPIC_AUTH_TOKEN")
+                            .or_else(|| e.get("ANTHROPIC_API_KEY"))
+                    })
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("");
+                (base, key)
+            }
+            AppType::Kimi => {
+                let base = env
+                    .and_then(|e| e.get("KIMI_BASE_URL"))
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("");
+                let key = env
+                    .and_then(|e| e.get("KIMI_API_KEY"))
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("");
+                (base, key)
+            }
+            _ => ("", ""),
+        };
 
         let quota = crate::services::coding_plan::get_coding_plan_quota(base_url, api_key)
             .await
